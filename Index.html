@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Little Surprise</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-pink': '#FF69B4', // Hot Pink
+                        'secondary-pink': '#F7A9D3',
+                        'bg-dark': '#1A1A2E', // Dark Blue/Purple
+                        'progress-fill': '#2ECC71', // Bright Green
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for animations and aesthetics */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1A1A2E; /* Dark Blue/Purple */
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start; /* Start from the top to make room for the bar */
+            align-items: center;
+            color: white;
+            overflow: hidden; /* Prevent scroll when confetti is active */
+            padding-top: 1.5rem; /* Space for the progress bar */
+            /* Crucial: Prevent touch from being interpreted as scrolling/zooming immediately */
+            touch-action: manipulation; 
+        }
+
+        /* Confetti Animation */
+        @keyframes confetti-fall {
+            0% { transform: translateY(-50vh) rotate(0deg); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        .confetti {
+            position: fixed;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: confetti-fall 4s linear forwards;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+        }
+        
+        /* Gift Box Transition */
+        #gift-box {
+            transition: transform 0.1s ease-out;
+            cursor: pointer;
+            user-select: none;
+            /* Using a subtle shadow now that the background is transparent */
+            box-shadow: 0 10px 40px rgba(255, 105, 180, 0.2); 
+            z-index: 50; /* Ensure the gift box is on top of any potential overlays */
+        }
+        
+        /* State when the gift is open */
+        .gift-open #gift-box-wrapper {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+        
+        #gift-box-wrapper {
+            transition: opacity 0.5s, transform 0.5s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%; /* Ensure it centers within the available space */
+        }
+
+        /* Surprise Content Transition */
+        #surprise-content {
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 1s 0.5s, transform 1s 0.5s; /* Delay transition to allow box to disappear */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 400px;
+            z-index: 60; /* Higher z-index for the reveal content */
+        }
+
+        .gift-open #surprise-content {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* Progress Bar Transition */
+        #progress-bar {
+            transition: width 0.3s ease-out;
+        }
+    </style>
+</head>
+<body id="main-container" class="flex flex-col items-center justify-start min-h-screen">
+
+    <!-- Progress Bar Container -->
+    <div id="progress-container" class="w-11/12 max-w-lg mb-12 mt-4">
+        <div class="h-3 bg-gray-700 rounded-full overflow-hidden shadow-inner">
+            <div id="progress-bar" class="h-full bg-progress-fill transition-all duration-300 ease-out" style="width: 0%;"></div>
+        </div>
+    </div>
+
+    <!-- Gift Box Wrapper (Centers the box vertically) -->
+    <div id="gift-box-wrapper" class="flex-grow flex items-center justify-center w-full">
+        <!-- Gift Box Element - Tap target/Hitbox. Size increased to 280px -->
+        <div id="gift-box" class="flex flex-col items-center justify-center p-0 rounded-xl bg-transparent active:scale-95 transition-all relative"
+             style="width: 280px; height: 280px;"> 
+            <!-- New Gift Box Image -->
+            <img src="https://cdn-icons-png.flaticon.com/512/2338/2338395.png" 
+                 alt="Celebratory Gift Box" 
+                 class="w-full h-full object-contain"
+                 onerror="this.onerror=null; this.src='https://placehold.co/280x280/FF69B4/FFFFFF?text=GIFT+BOX';"
+            >
+            <!-- Overlay Text to make it clear it's interactive -->
+            <p class="absolute bottom-4 text-white font-bold tracking-wider uppercase text-sm z-10 pointer-events-none">TAP ME!</p>
+        </div>
+    </div>
+
+    <!-- Surprise Content (Hidden initially) -->
+    <div id="surprise-content" class="text-center p-6 bg-white/10 backdrop-blur-sm rounded-2xl shadow-xl">
+        <!-- Flower Image -->
+        <img src="https://aaatoysandcollectibles.com/cdn/shop/files/Pop_PlantsTulip_hi-res_300x300.png?v=1746676783" 
+             alt="Tulip Plants" 
+             class="mx-auto mb-4 w-28 h-28 object-contain animate-pulse" 
+             onerror="this.onerror=null; this.src='https://placehold.co/112x112/FF69B4/FFFFFF?text=Tulip';"
+        >
+        <h1 class="text-3xl font-extrabold text-primary-pink mb-4">A Little Gift Just For You</h1>
+        <p class="text-xl font-medium text-white">
+            "Another month begins and I'm glad it's still you &lt;3"
+        </p>
+    </div>
+
+    <script>
+        // Use DOMContentLoaded to ensure all elements are loaded before the script tries to access them.
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("Script Initialized: DOM content loaded.");
+
+            const MAX_TAPS = 30;
+            let currentTaps = 0;
+            let isGiftOpen = false;
+
+            const giftBox = document.getElementById('gift-box');
+            const progressBarInner = document.getElementById('progress-bar');
+            const mainContainer = document.getElementById('main-container');
+            const progressContainer = document.getElementById('progress-container');
+
+            // Safety Check: If any critical element is missing, stop initialization and log an error.
+            if (!giftBox || !progressBarInner || !mainContainer || !progressContainer) {
+                console.error("Initialization Failed: One or more required DOM elements were not found.");
+                return;
+            }
+
+            // Utility to create widespread confetti burst
+            function createConfetti() {
+                const colors = ['#FF69B4', '#F7A9D3', '#FFFFFF', '#6d28d9', '#fef9c3']; 
+                const numConfetti = 70;
+
+                for (let i = 0; i < numConfetti; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.classList.add('confetti');
+                    
+                    // Randomize color
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+                    // Spread across the full viewport width
+                    const startX = Math.random() * window.innerWidth;
+                    // Start far above the viewport height, randomly distributed vertically
+                    const startY = - (50 + Math.random() * 200); // Start between 50px and 250px above the top edge
+
+                    confetti.style.left = `${startX}px`;
+                    confetti.style.top = `${startY}px`;
+
+                    // Randomize animation delay and duration (slightly longer fall time)
+                    confetti.style.animationDuration = `${3 + Math.random() * 2.5}s`; 
+                    confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+                    
+                    // Random initial scale/size and rotation
+                    confetti.style.transform = `scale(${0.5 + Math.random() * 1.5}) rotate(${Math.random() * 360}deg)`;
+
+                    mainContainer.appendChild(confetti);
+                    
+                    // Start fade in/fall animation
+                    setTimeout(() => confetti.style.opacity = '1', 10);
+                    
+                    // Remove after animation is done to clean up DOM
+                    setTimeout(() => confetti.remove(), 5000);
+                }
+            }
+
+            function handleTap(event) {
+                // *** FIX: Prevent the default browser action (like scrolling/dragging) which might be cancelling the tap. ***
+                event.preventDefault();
+
+                // We use pointerdown, which fires immediately and handles all input types.
+                console.log(`Pointer event detected. Type: ${event.type}. Taps: ${currentTaps + 1}`);
+                
+                // If open, tapping just triggers a new widespread burst
+                if (isGiftOpen) {
+                    createConfetti(); 
+                    return;
+                }
+
+                currentTaps++;
+
+                const progress = Math.min(100, (currentTaps / MAX_TAPS) * 100);
+                progressBarInner.style.width = `${progress}%`;
+                
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(50);
+                }
+
+                // Game complete
+                if (currentTaps >= MAX_TAPS) {
+                    isGiftOpen = true;
+                    
+                    // 1. Trigger initial widespread confetti burst
+                    createConfetti();
+
+                    // 2. Open box animation (hiding the box and showing content)
+                    setTimeout(() => {
+                        mainContainer.classList.add('gift-open');
+                        progressContainer.style.display = 'none';
+                    }, 100); 
+
+                    // 3. Keep confetti going for a moment (widespread)
+                    let confettiInterval = setInterval(() => {
+                        createConfetti();
+                    }, 500);
+
+                    setTimeout(() => clearInterval(confettiInterval), 3000);
+                }
+            }
+
+            // Using pointerdown for reliability across touch and mouse input
+            giftBox.addEventListener('pointerdown', handleTap);
+
+            console.log("Event listener (pointerdown) attached successfully.");
+        });
+    </script>
+
+</body>
+</html>
